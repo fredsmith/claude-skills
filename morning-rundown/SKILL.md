@@ -43,28 +43,30 @@ Fetch GitHub and calendar in parallel.
 
 **Do not use `gh api /notifications` for review/assignment buckets.** That endpoint returns the unread *notification inbox* — a `review_requested` entry from two weeks ago stays in the inbox even after the PR is merged or closed, so filtering by `reason` produces stale results. Use `gh search` with `--state=open` instead — it queries GitHub for items currently in those states.
 
+Always pass `--archived=false` so PRs/issues from archived repos (read-only, can't be acted on) don't pollute the buckets. Without this, stale `review-requested` entries from long-archived projects keep appearing forever.
+
 Run these in parallel:
 
 ```bash
 # Needs your review (open PRs only)
-gh search prs --review-requested=@me --state=open \
+gh search prs --review-requested=@me --state=open --archived=false \
   --json url,title,repository,updatedAt --limit 50
 
 # Assigned PRs (open only)
-gh search prs --assignee=@me --state=open \
+gh search prs --assignee=@me --state=open --archived=false \
   --json url,title,repository,updatedAt --limit 50
 
 # Assigned issues (open only — note: gh search issues includes PRs, so filter)
-gh search issues --assignee=@me --state=open \
+gh search issues --assignee=@me --state=open --archived=false \
   --json url,title,repository,updatedAt,isPullRequest --limit 50
 
 # Mentions in open PRs/issues with recent activity (last 14 days)
 # IMPORTANT: use python for date math — `date -v` (BSD) and `date -d` (GNU)
 # are mutually exclusive, and PATH may have either. Don't substitute back.
 DATE_14D_AGO=$(python3 -c 'from datetime import date,timedelta;print(date.today()-timedelta(days=14))')
-gh search prs --mentions=@me --state=open --updated=">$DATE_14D_AGO" \
+gh search prs --mentions=@me --state=open --archived=false --updated=">$DATE_14D_AGO" \
   --json url,title,repository,updatedAt --limit 50
-gh search issues --mentions=@me --state=open --updated=">$DATE_14D_AGO" \
+gh search issues --mentions=@me --state=open --archived=false --updated=">$DATE_14D_AGO" \
   --json url,title,repository,updatedAt,isPullRequest --limit 50
 ```
 
@@ -86,7 +88,7 @@ Show your *own* open non-draft PRs grouped by status, so you know who to nudge f
 ```bash
 # List your open non-draft PRs (last ~90 days)
 DATE_90D_AGO=$(python3 -c 'from datetime import date,timedelta;print(date.today()-timedelta(days=90))')
-gh search prs --author=@me --state=open --draft=false \
+gh search prs --author=@me --state=open --draft=false --archived=false \
   --updated=">$DATE_90D_AGO" \
   --json url,title,repository,updatedAt --limit 50
 ```

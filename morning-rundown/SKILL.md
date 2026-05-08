@@ -59,7 +59,7 @@ gh search issues --assignee=@me --state=open \
   --json url,title,repository,updatedAt,isPullRequest --limit 50
 
 # Mentions in open PRs/issues with recent activity (last 14 days)
-DATE_14D_AGO=$(date -v-14d +%Y-%m-%d)
+DATE_14D_AGO=$(date -v-14d +%Y-%m-%d 2>/dev/null || date -d '14 days ago' +%Y-%m-%d)
 gh search prs --mentions=@me --state=open --updated=">$DATE_14D_AGO" \
   --json url,title,repository,updatedAt --limit 50
 gh search issues --mentions=@me --state=open --updated=">$DATE_14D_AGO" \
@@ -83,7 +83,7 @@ Show your *own* open non-draft PRs grouped by status, so you know who to nudge f
 
 ```bash
 # List your open non-draft PRs (last ~90 days)
-DATE_90D_AGO=$(date -v-90d +%Y-%m-%d)
+DATE_90D_AGO=$(date -v-90d +%Y-%m-%d 2>/dev/null || date -d '90 days ago' +%Y-%m-%d)
 gh search prs --author=@me --state=open --draft=false \
   --updated=">$DATE_90D_AGO" \
   --json url,title,repository,updatedAt --limit 50

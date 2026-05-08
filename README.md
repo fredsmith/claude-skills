@@ -2,6 +2,12 @@
 
 Claude Code skills — both daily-driver workflows and one-shot builders that turn your professional history into personalized AI tools.
 
+## Installation
+
+Skills live in `~/.claude/skills/<name>/` and are picked up by Claude Code globally. Each skill below has its own one-liner — install only what you want. Re-run any one-liner to update that skill.
+
+If you'd rather track them all with `git pull`, see [Install all skills via clone + symlink](#install-all-skills-via-clone--symlink) at the bottom.
+
 ## Skills
 
 ### [morning-rundown](morning-rundown/SKILL.md)
@@ -12,6 +18,12 @@ Assembles a "what to tackle first" briefing from GitHub (PRs awaiting your revie
 
 **Data sources:** GitHub (`gh` CLI), Google Workspace calendar + Drive (any CLI with JSON output works; written against [`gws`](https://crates.io/crates/gws)), todo.sh.
 
+**Install:**
+
+```bash
+mkdir -p ~/.claude/skills && curl -fsSL https://github.com/fredsmith/claude-skills/archive/refs/heads/main.tar.gz | tar -xz -C ~/.claude/skills --strip-components=1 claude-skills-main/morning-rundown
+```
+
 ### [building-expert-code-reviewer](expert-code-reviewer/SKILL.md)
 
 Builds a code review agent that reviews PRs the way you do. Exports your GitHub review history and Slack discussions, extracts recurring patterns via parallel analysis, and compiles them into a reviewer agent with testable heuristics.
@@ -20,6 +32,12 @@ Builds a code review agent that reviews PRs the way you do. Exports your GitHub 
 
 **Data sources:** GitHub PRs (`gh` CLI), Slack (`slackdump`), optionally Confluence/wiki/blog posts.
 
+**Install:**
+
+```bash
+mkdir -p ~/.claude/skills && curl -fsSL https://github.com/fredsmith/claude-skills/archive/refs/heads/main.tar.gz | tar -xz -C ~/.claude/skills --strip-components=1 claude-skills-main/expert-code-reviewer
+```
+
 ### [building-personal-writing-tone](personal-writing-tone/SKILL.md)
 
 Builds a voice profile so Claude writes content that sounds like you. Analyzes your writing across multiple sources, extracts sentence patterns and vocabulary, and packages them as a reusable style guide with an anti-AI checklist.
@@ -27,6 +45,26 @@ Builds a voice profile so Claude writes content that sounds like you. Analyzes y
 **What you get:** A voice profile with sentence-level patterns, banned AI vocabulary list, 30-50 categorized writing samples, and a checklist that catches AI voice in output.
 
 **Data sources:** GitHub reviews, Slack, blog posts, documentation, email.
+
+**Install:**
+
+```bash
+mkdir -p ~/.claude/skills && curl -fsSL https://github.com/fredsmith/claude-skills/archive/refs/heads/main.tar.gz | tar -xz -C ~/.claude/skills --strip-components=1 claude-skills-main/personal-writing-tone
+```
+
+## Install all skills via clone + symlink
+
+If you want every skill, tracked against upstream so `git pull` updates them in place:
+
+```bash
+git clone https://github.com/fredsmith/claude-skills.git ~/src/claude-skills
+mkdir -p ~/.claude/skills
+for d in ~/src/claude-skills/*/; do
+  ln -sfn "$d" ~/.claude/skills/"$(basename "$d")"
+done
+```
+
+Update later with `git -C ~/src/claude-skills pull`.
 
 ## Prerequisites
 

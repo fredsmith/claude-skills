@@ -28,6 +28,16 @@ scan_repo() { # $1 = repo working dir
   if [ "$n" -gt 0 ]; then
     printf 'dirty|%s|%s|%s|%s\n' "$repo" "$ownerrepo" "$branch" "$n"
   fi
+
+  git -C "$repo" rev-parse HEAD >/dev/null 2>&1 || return 0
+  [ -n "$branch" ] || return 0
+
+  if git -C "$repo" rev-parse --abbrev-ref --symbolic-full-name '@{u}' >/dev/null 2>&1; then
+    ahead=$(git -C "$repo" rev-list --count '@{u}..HEAD' 2>/dev/null || echo 0)
+    if [ "$ahead" -gt 0 ]; then
+      printf 'ahead|%s|%s|%s|%s\n' "$repo" "$ownerrepo" "$branch" "$ahead"
+    fi
+  fi
 }
 
 main() {

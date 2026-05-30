@@ -37,6 +37,8 @@ scan_repo() { # $1 = repo working dir
     if [ "$ahead" -gt 0 ]; then
       printf 'ahead|%s|%s|%s|%s\n' "$repo" "$ownerrepo" "$branch" "$ahead"
     fi
+  else
+    printf 'branch-no-upstream|%s|%s|%s|\n' "$repo" "$ownerrepo" "$branch"
   fi
 }
 

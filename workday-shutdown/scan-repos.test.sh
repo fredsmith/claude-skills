@@ -38,10 +38,19 @@ git -C "$ROOT/ahead" remote add origin "$TMP/ahead-origin.git"
 git -C "$ROOT/ahead" push -q -u origin HEAD
 echo c >"$ROOT/ahead/c"; commit_all "$ROOT/ahead" second
 
+# github origin, committed, no upstream → branch-no-upstream + owner/repo parsed
+mkdir -p "$ROOT/ghbranch"; git_init "$ROOT/ghbranch"; echo a >"$ROOT/ghbranch/a"; commit_all "$ROOT/ghbranch"
+git -C "$ROOT/ghbranch" remote add origin git@github.com:acme/widget.git
+
+# no origin, committed, no upstream → branch-no-upstream, empty owner/repo
+mkdir -p "$ROOT/noorigin"; git_init "$ROOT/noorigin"; echo a >"$ROOT/noorigin/a"; commit_all "$ROOT/noorigin"
+
 OUT=$(SHUTDOWN_REPO_ROOTS="$ROOT" bash "$SCRIPT")
 
 present "dirty repo emits a dirty line" "dirty|$ROOT/dirty|" "$OUT"
 absent  "clean repo emits nothing"      "|$ROOT/clean|"      "$OUT"
 present "ahead repo emits an ahead line" "ahead|$ROOT/ahead|" "$OUT"
+present "github no-upstream parses owner/repo" "branch-no-upstream|$ROOT/ghbranch|acme/widget|" "$OUT"
+present "no-origin no-upstream has empty owner/repo" "branch-no-upstream|$ROOT/noorigin||" "$OUT"
 
 exit $fail

@@ -18,7 +18,7 @@ The end-of-day bookend to morning-rundown. Makes sure no work is stranded — un
 
 | Var | Default | What it controls |
 | --- | --- | --- |
-| `SHUTDOWN_REPO_ROOTS` | `$project_dirs` → `$SRCPATH` → `$HOME/src` | Colon-separated dirs walked for git repos. Falls through your existing env so usually no config is needed. |
+| `SHUTDOWN_REPO_ROOTS` | `$project_dirs` | Colon-separated dirs walked for git repos. If unset, uses your exported `$project_dirs`. There is intentionally **no** broad fallback to `$SRCPATH`/`$HOME/src` — scanning your whole source tree pulls in archived/unrelated repos. If neither is set, the scan errors instead of sweeping blindly. |
 | `SHUTDOWN_DRAFT_STALE_DAYS` | `7` | A draft PR untouched longer than this is flagged stale. |
 | `SHUTDOWN_PERSONAL_TAG` | `@personal` | todo.sh context tag for personal carryover. |
 | `RUNDOWN_CONTEXT_TAG` | `@work` | (shared) tag on work carryover. |
@@ -152,6 +152,6 @@ EOF
 ## Notes
 
 - If `gh` is unauthenticated or rate-limited, surface that explicitly — don't present empty GitHub sections as "all clear."
-- If no roots resolve (all env vars empty and `$HOME/src` missing), tell the user to set `SHUTDOWN_REPO_ROOTS` rather than scanning blindly.
+- The scan covers only `SHUTDOWN_REPO_ROOTS` (or `$project_dirs`) — never the whole `$HOME/src`. If neither is set, `scan-repos.sh` exits non-zero with a message; surface it and ask the user to set `SHUTDOWN_REPO_ROOTS` rather than scanning blindly. Note `$project_dirs` must be **exported** for the helper to see it; if the report looks empty or wrong, run the scan with `SHUTDOWN_REPO_ROOTS="$project_dirs" ~/.claude/skills/workday-shutdown/scan-repos.sh` to forward it explicitly.
 - Repos with no `origin` are still scanned for local state and classified personal; no GitHub-side checks run for them.
 - The helper finds git repos (including worktrees, whose `.git` is a file) up to 4 levels deep under each root, follows symlinked roots, and prunes inside each repo. Worktrees kept under a gitignored `.worktrees/` are scanned too — stranded work there still surfaces.

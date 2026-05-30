@@ -110,7 +110,7 @@ snoozed() {
 
 The end-of-day bookend to morning-rundown. Scans every git repo under your configured roots for work stranded locally (uncommitted changes, unpushed commits, branches with no PR), checks GitHub for unsubmitted PR reviews and your stale draft PRs, and splits findings into work vs. personal. Offers to push or open draft PRs per item (with confirmation), then carries anything unfinished into [todo.sh](https://github.com/todotxt/todo.txt-cli) — work under `@work`, personal under `@personal` — so the next morning-rundown resurfaces it.
 
-**What you get:** A "nothing left behind" check before you log off, plus a closed morning/evening loop over the same todo.txt queue. Configurable repo roots, staleness threshold, and tags via env vars; reuses your existing `$project_dirs`/`$SRCPATH` if set.
+**What you get:** A "nothing left behind" check before you log off, plus a closed morning/evening loop over the same todo.txt queue. Configurable repo roots, staleness threshold, and tags via env vars; reuses your existing exported `$project_dirs` if set (and only those roots — it won't sweep your whole `~/src`).
 
 **Data sources:** Local git (`scan-repos.sh`), GitHub (`gh` CLI), todo.sh (via morning-rundown's `sync-todos.sh`).
 

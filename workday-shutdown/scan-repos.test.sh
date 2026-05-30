@@ -62,9 +62,13 @@ present "no-origin no-upstream has empty owner/repo" "branch-no-upstream|$ROOT/n
 OUT_PD=$(env -u SHUTDOWN_REPO_ROOTS project_dirs="$ROOT" bash "$SCRIPT")
 present "falls back to \$project_dirs when SHUTDOWN_REPO_ROOTS unset" "dirty|$ROOT/dirty|" "$OUT_PD"
 
-# Fallback: only $SRCPATH set
-OUT_SP=$(env -u SHUTDOWN_REPO_ROOTS -u project_dirs SRCPATH="$ROOT" bash "$SCRIPT")
-present "falls back to \$SRCPATH" "dirty|$ROOT/dirty|" "$OUT_SP"
+# No broad fallback: with neither SHUTDOWN_REPO_ROOTS nor project_dirs set, the
+# scanner must NOT scan $SRCPATH or ~/src — it errors instead of sweeping broadly.
+OUT_NR=$(env -u SHUTDOWN_REPO_ROOTS -u project_dirs SRCPATH="$ROOT" HOME="$ROOT" bash "$SCRIPT" 2>"$TMP/err_nr"); rc_nr=$?
+ERR_NR=$(cat "$TMP/err_nr")
+absent "does NOT fall back to \$SRCPATH" "dirty|$ROOT/dirty|" "$OUT_NR"
+if [ "$rc_nr" -ne 0 ]; then echo "ok   - nonzero exit when no roots configured"; else echo "FAIL - expected nonzero exit when no roots, got 0"; fail=1; fi
+if printf '%s\n' "$ERR_NR" | grep -qF "SHUTDOWN_REPO_ROOTS"; then echo "ok   - error names SHUTDOWN_REPO_ROOTS"; else echo "FAIL - missing helpful error naming SHUTDOWN_REPO_ROOTS"; fail=1; fi
 
 # Missing root in the list is skipped without error
 OUT_MISS=$(SHUTDOWN_REPO_ROOTS="$ROOT:/nonexistent/xyz123" bash "$SCRIPT"); rc=$?

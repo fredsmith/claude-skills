@@ -7,8 +7,7 @@ set -uo pipefail
 resolve_roots() {
   if   [ -n "${SHUTDOWN_REPO_ROOTS:-}" ]; then printf '%s' "$SHUTDOWN_REPO_ROOTS"
   elif [ -n "${project_dirs:-}" ];        then printf '%s' "$project_dirs"
-  elif [ -n "${SRCPATH:-}" ];             then printf '%s' "$SRCPATH"
-  else printf '%s' "$HOME/src"; fi
+  fi
 }
 
 parse_owner_repo() { # $1=repo dir → owner/repo for github origins, else empty
@@ -47,6 +46,10 @@ scan_repo() { # $1 = repo working dir
 main() {
   local roots root repo gitdir
   roots=$(resolve_roots)
+  if [ -z "$roots" ]; then
+    echo "scan-repos.sh: no repo roots configured. Set SHUTDOWN_REPO_ROOTS (colon-separated) or export \$project_dirs." >&2
+    return 2
+  fi
   local IFS=:
   for root in $roots; do
     case "$root" in "~"*) root="${HOME}${root#\~}";; esac

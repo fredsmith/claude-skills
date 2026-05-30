@@ -5,7 +5,9 @@
 set -uo pipefail
 
 resolve_roots() {
-  if [ -n "${SHUTDOWN_REPO_ROOTS:-}" ]; then printf '%s' "$SHUTDOWN_REPO_ROOTS"
+  if   [ -n "${SHUTDOWN_REPO_ROOTS:-}" ]; then printf '%s' "$SHUTDOWN_REPO_ROOTS"
+  elif [ -n "${project_dirs:-}" ];        then printf '%s' "$project_dirs"
+  elif [ -n "${SRCPATH:-}" ];             then printf '%s' "$SRCPATH"
   else printf '%s' "$HOME/src"; fi
 }
 

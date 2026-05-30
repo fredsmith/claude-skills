@@ -53,4 +53,17 @@ present "ahead repo emits an ahead line" "ahead|$ROOT/ahead|" "$OUT"
 present "github no-upstream parses owner/repo" "branch-no-upstream|$ROOT/ghbranch|acme/widget|" "$OUT"
 present "no-origin no-upstream has empty owner/repo" "branch-no-upstream|$ROOT/noorigin||" "$OUT"
 
+# Fallback: SHUTDOWN_REPO_ROOTS unset → use $project_dirs
+OUT_PD=$(env -u SHUTDOWN_REPO_ROOTS project_dirs="$ROOT" bash "$SCRIPT")
+present "falls back to \$project_dirs when SHUTDOWN_REPO_ROOTS unset" "dirty|$ROOT/dirty|" "$OUT_PD"
+
+# Fallback: only $SRCPATH set
+OUT_SP=$(env -u SHUTDOWN_REPO_ROOTS -u project_dirs SRCPATH="$ROOT" bash "$SCRIPT")
+present "falls back to \$SRCPATH" "dirty|$ROOT/dirty|" "$OUT_SP"
+
+# Missing root in the list is skipped without error
+OUT_MISS=$(SHUTDOWN_REPO_ROOTS="$ROOT:/nonexistent/xyz123" bash "$SCRIPT"); rc=$?
+present "still scans real roots when a listed root is missing" "dirty|$ROOT/dirty|" "$OUT_MISS"
+if [ "$rc" -eq 0 ]; then echo "ok   - exits 0 despite missing root"; else echo "FAIL - nonzero exit ($rc) on missing root"; fail=1; fi
+
 exit $fail

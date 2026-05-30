@@ -1,0 +1,47 @@
+#!/usr/bin/env bash
+# scan-repos.sh — walk configured roots; emit one line per local-git finding.
+#   <type>|<repo_path>|<owner/repo>|<branch>|<detail>
+#   type ∈ dirty | ahead | branch-no-upstream
+set -uo pipefail
+
+resolve_roots() {
+  if [ -n "${SHUTDOWN_REPO_ROOTS:-}" ]; then printf '%s' "$SHUTDOWN_REPO_ROOTS"
+  else printf '%s' "$HOME/src"; fi
+}
+
+parse_owner_repo() { # $1=repo dir → owner/repo for github origins, else empty
+  local url
+  url=$(git -C "$1" remote get-url origin 2>/dev/null) || return 0
+  case "$url" in
+    *github.com[:/]*)
+      url=${url#*github.com}; url=${url#:}; url=${url#/}; url=${url%.git}
+      printf '%s' "$url" ;;
+  esac
+}
+
+scan_repo() { # $1 = repo working dir
+  local repo=$1 ownerrepo branch n ahead
+  branch=$(git -C "$repo" symbolic-ref --quiet --short HEAD 2>/dev/null) || branch=""
+  ownerrepo=$(parse_owner_repo "$repo")
+
+  n=$(git -C "$repo" status --porcelain 2>/dev/null | grep -c .)
+  if [ "$n" -gt 0 ]; then
+    printf 'dirty|%s|%s|%s|%s\n' "$repo" "$ownerrepo" "$branch" "$n"
+  fi
+}
+
+main() {
+  local roots root repo gitdir
+  roots=$(resolve_roots)
+  local IFS=:
+  for root in $roots; do
+    case "$root" in "~"*) root="${HOME}${root#\~}";; esac
+    [ -n "$root" ] && [ -d "$root" ] || continue
+    while IFS= read -r gitdir; do
+      repo=$(dirname "$gitdir")
+      scan_repo "$repo"
+    done < <(find "$root" -maxdepth 4 -type d -name .git -prune 2>/dev/null)
+  done
+}
+
+main "$@"

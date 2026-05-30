@@ -106,6 +106,22 @@ snoozed() {
 }
 ```
 
+### [workday-shutdown](workday-shutdown/SKILL.md)
+
+The end-of-day bookend to morning-rundown. Scans every git repo under your configured roots for work stranded locally (uncommitted changes, unpushed commits, branches with no PR), checks GitHub for unsubmitted PR reviews and your stale draft PRs, and splits findings into work vs. personal. Offers to push or open draft PRs per item (with confirmation), then carries anything unfinished into [todo.sh](https://github.com/todotxt/todo.txt-cli) — work under `@work`, personal under `@personal` — so the next morning-rundown resurfaces it.
+
+**What you get:** A "nothing left behind" check before you log off, plus a closed morning/evening loop over the same todo.txt queue. Configurable repo roots, staleness threshold, and tags via env vars; reuses your existing `$project_dirs`/`$SRCPATH` if set.
+
+**Data sources:** Local git (`scan-repos.sh`), GitHub (`gh` CLI), todo.sh (via morning-rundown's `sync-todos.sh`).
+
+**Requires:** the morning-rundown skill installed alongside it (for `sync-todos.sh` and shared config).
+
+**Install:**
+
+```bash
+mkdir -p ~/.claude/skills && curl -fsSL https://github.com/fredsmith/claude-skills/archive/refs/heads/main.tar.gz | tar -xz -C ~/.claude/skills --strip-components=1 claude-skills-main/workday-shutdown
+```
+
 ### [building-expert-code-reviewer](expert-code-reviewer/SKILL.md)
 
 Builds a code review agent that reviews PRs the way you do. Exports your GitHub review history and Slack discussions, extracts recurring patterns via parallel analysis, and compiles them into a reviewer agent with testable heuristics.

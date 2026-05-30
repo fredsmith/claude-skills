@@ -54,7 +54,7 @@ main() {
     while IFS= read -r gitdir; do
       repo=$(dirname "$gitdir")
       scan_repo "$repo"
-    done < <(find "$root" -maxdepth 4 -type d -name .git -prune 2>/dev/null)
+    done < <(find -L "$root" -maxdepth 4 -name .git \( -type d -o -type f \) -prune 2>/dev/null)
   done
 }
 

@@ -45,9 +45,14 @@ git -C "$ROOT/ghbranch" remote add origin git@github.com:acme/widget.git
 # no origin, committed, no upstream → branch-no-upstream, empty owner/repo
 mkdir -p "$ROOT/noorigin"; git_init "$ROOT/noorigin"; echo a >"$ROOT/noorigin/a"; commit_all "$ROOT/noorigin"
 
+# worktree of an existing repo (its .git is a FILE), with an uncommitted edit → must be scanned
+git -C "$ROOT/ahead" worktree add -q "$ROOT/ahead-wt" -b wtbranch 2>/dev/null
+echo wt >"$ROOT/ahead-wt/wtfile"
+
 OUT=$(SHUTDOWN_REPO_ROOTS="$ROOT" bash "$SCRIPT")
 
 present "dirty repo emits a dirty line" "dirty|$ROOT/dirty|" "$OUT"
+present "worktree (.git file) is scanned" "$ROOT/ahead-wt|" "$OUT"
 absent  "clean repo emits nothing"      "|$ROOT/clean|"      "$OUT"
 present "ahead repo emits an ahead line" "ahead|$ROOT/ahead|" "$OUT"
 present "github no-upstream parses owner/repo" "branch-no-upstream|$ROOT/ghbranch|acme/widget|" "$OUT"
@@ -65,5 +70,10 @@ present "falls back to \$SRCPATH" "dirty|$ROOT/dirty|" "$OUT_SP"
 OUT_MISS=$(SHUTDOWN_REPO_ROOTS="$ROOT:/nonexistent/xyz123" bash "$SCRIPT"); rc=$?
 present "still scans real roots when a listed root is missing" "dirty|$ROOT/dirty|" "$OUT_MISS"
 if [ "$rc" -eq 0 ]; then echo "ok   - exits 0 despite missing root"; else echo "FAIL - nonzero exit ($rc) on missing root"; fail=1; fi
+
+# symlinked root must be traversed (find -L)
+ln -s "$ROOT" "$TMP/rootlink"
+OUT_LINK=$(SHUTDOWN_REPO_ROOTS="$TMP/rootlink" bash "$SCRIPT")
+present "symlinked root is traversed" "dirty|$TMP/rootlink/dirty|" "$OUT_LINK"
 
 exit $fail

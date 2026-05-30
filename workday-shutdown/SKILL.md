@@ -154,4 +154,4 @@ EOF
 - If `gh` is unauthenticated or rate-limited, surface that explicitly — don't present empty GitHub sections as "all clear."
 - If no roots resolve (all env vars empty and `$HOME/src` missing), tell the user to set `SHUTDOWN_REPO_ROOTS` rather than scanning blindly.
 - Repos with no `origin` are still scanned for local state and classified personal; no GitHub-side checks run for them.
-- The helper finds `.git` directories up to 4 levels deep and prunes inside them; git worktrees kept under a gitignored `.worktrees/` are working dirs and may appear — that's expected.
+- The helper finds git repos (including worktrees, whose `.git` is a file) up to 4 levels deep under each root, follows symlinked roots, and prunes inside each repo. Worktrees kept under a gitignored `.worktrees/` are scanned too — stranded work there still surfaces.

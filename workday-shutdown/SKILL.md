@@ -127,7 +127,12 @@ Never auto-commit a dirty tree, and never push/PR without explicit confirmation.
 
 ### 6. Carryover to todo.sh (automatic, for still-stranded items)
 
-After offers, build todo lines for work that is **still** stranded (items you didn't push/PR, dirty trees, and unsubmitted reviews) and pipe them through morning-rundown's sync helper. Work items get `RUNDOWN_CONTEXT_TAG` (`@work`); personal items get `SHUTDOWN_PERSONAL_TAG` (`@personal`). `sync-todos.sh` dedups by `url:` (or full text when there's no URL), so re-running nightly is safe.
+After offers, build todo lines for work that is **still** stranded (items you didn't push/PR, dirty trees, and unsubmitted reviews) and pipe them through morning-rundown's sync helper. Work items get `RUNDOWN_CONTEXT_TAG` (default `@work`); personal items get `SHUTDOWN_PERSONAL_TAG` (default `@personal`).
+
+**Guard against context-tag drift (prevents duplicates).** `sync-todos.sh` dedups by `url:` or by *exact* full text, so a no-URL carryover line that differs only by its context tag is treated as new — e.g. `…in cortex @work` vs `…in cortex @wanderu`. This happens when `RUNDOWN_CONTEXT_TAG` is set in your interactive shell but **not exported**, so this skill (run via a non-interactive shell) silently falls back to the `@work` default while morning-rundown uses your real tag. Two defenses, do both:
+
+1. **Tag-insensitive pre-dedup.** Before syncing, read the active `$TODO_FILE`. For each candidate line, strip its trailing context tag and skip the candidate if an active (non-`x `) todo already exists for the same `<action> in <repo>` (or same `url:`) under *any* tag. Only pipe the survivors to `sync-todos.sh`.
+2. **Detect an unexported tag.** If `RUNDOWN_CONTEXT_TAG` resolves to the bare `@work` default but the existing todos use a different work tag (e.g. `@wanderu`), stop and tell the user to export it (`set -gx RUNDOWN_CONTEXT_TAG @wanderu` in fish) rather than syncing under `@work`.
 
 Line formats (`$TAG` is `@work` for work findings, `@personal` for personal):
 
@@ -154,4 +159,5 @@ EOF
 - If `gh` is unauthenticated or rate-limited, surface that explicitly — don't present empty GitHub sections as "all clear."
 - The scan covers only `SHUTDOWN_REPO_ROOTS` (or `$project_dirs`) — never the whole `$HOME/src`. If neither is set, `scan-repos.sh` exits non-zero with a message; surface it and ask the user to set `SHUTDOWN_REPO_ROOTS` rather than scanning blindly. Note `$project_dirs` must be **exported** for the helper to see it; if the report looks empty or wrong, run the scan with `SHUTDOWN_REPO_ROOTS="$project_dirs" ~/.claude/skills/workday-shutdown/scan-repos.sh` to forward it explicitly.
 - Repos with no `origin` are still scanned for local state and classified personal; no GitHub-side checks run for them.
+- Like `$project_dirs`, the tag vars (`RUNDOWN_CONTEXT_TAG`, `SHUTDOWN_PERSONAL_TAG`) must be **exported** to be visible here. An unexported `RUNDOWN_CONTEXT_TAG` is the usual cause of duplicate carryover (the skill falls back to `@work` while the rest of your setup uses another tag) — see the tag-drift guard in step 6.
 - The helper finds git repos (including worktrees, whose `.git` is a file) up to 4 levels deep under each root, follows symlinked roots, and prunes inside each repo. Worktrees kept under a gitignored `.worktrees/` are scanned too — stranded work there still surfaces.

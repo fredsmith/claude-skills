@@ -49,6 +49,18 @@ mkdir -p "$ROOT/noorigin"; git_init "$ROOT/noorigin"; echo a >"$ROOT/noorigin/a"
 git -C "$ROOT/ahead" worktree add -q "$ROOT/ahead-wt" -b wtbranch 2>/dev/null
 echo wt >"$ROOT/ahead-wt/wtfile"
 
+# upstream existed then was pruned ([gone]): branch was pushed, merged, and the
+# remote branch deleted. Clean tree, in sync — NOT stranded, must emit nothing.
+mkdir -p "$ROOT/gone"; git_init "$ROOT/gone"; echo a >"$ROOT/gone/a"; commit_all "$ROOT/gone"
+git init -q --bare "$TMP/gone-origin.git"
+git -C "$ROOT/gone" remote add origin "$TMP/gone-origin.git"
+git -C "$ROOT/gone" push -q -u origin main
+git -C "$ROOT/gone" checkout -q -b feature
+echo b >"$ROOT/gone/b"; commit_all "$ROOT/gone" feat
+git -C "$ROOT/gone" push -q -u origin feature
+git -C "$ROOT/gone" push -q origin --delete feature
+git -C "$ROOT/gone" fetch -q --prune
+
 OUT=$(SHUTDOWN_REPO_ROOTS="$ROOT" bash "$SCRIPT")
 
 present "dirty repo emits a dirty line" "dirty|$ROOT/dirty|" "$OUT"
@@ -57,6 +69,7 @@ absent  "clean repo emits nothing"      "|$ROOT/clean|"      "$OUT"
 present "ahead repo emits an ahead line" "ahead|$ROOT/ahead|" "$OUT"
 present "github no-upstream parses owner/repo" "branch-no-upstream|$ROOT/ghbranch|acme/widget|" "$OUT"
 present "no-origin no-upstream has empty owner/repo" "branch-no-upstream|$ROOT/noorigin||" "$OUT"
+absent  "pruned ([gone]) upstream is not treated as stranded" "$ROOT/gone|" "$OUT"
 
 # Fallback: SHUTDOWN_REPO_ROOTS unset → use $project_dirs
 OUT_PD=$(env -u SHUTDOWN_REPO_ROOTS project_dirs="$ROOT" bash "$SCRIPT")

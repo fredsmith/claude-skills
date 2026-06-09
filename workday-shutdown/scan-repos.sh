@@ -38,6 +38,8 @@ scan_repo() { # $1 = repo working dir
     if [ "$ahead" -gt 0 ]; then
       printf 'ahead|%s|%s|%s|%s\n' "$repo" "$ownerrepo" "$branch" "$ahead"
     fi
+  elif git -C "$repo" config --get "branch.$branch.merge" >/dev/null 2>&1; then
+    :
   else
     printf 'branch-no-upstream|%s|%s|%s|\n' "$repo" "$ownerrepo" "$branch"
   fi

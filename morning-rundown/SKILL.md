@@ -11,6 +11,7 @@ Produces a "what to tackle first" briefing by pulling from GitHub and Google Wor
 
 - `gh` CLI authenticated (verify with `gh auth status`)
 - A Google Workspace CLI on PATH that can list calendar events and export Drive docs. The procedure below is written against [`gws`](https://crates.io/crates/gws), but any tool with equivalent JSON output works — adapt the commands as needed.
+  - `gws` supports multiple accounts via profile directories. If you have more than one, the profile holding your **work** calendar and Drive is almost never the default — see `RUNDOWN_GWS_PROFILE` below and the preflight in step 0.
 - `todo.sh` from [todo.txt-cli](https://github.com/todotxt/todo.txt-cli) installed and configured. The two helper scripts in this skill's directory wrap it:
   - `reconcile-todos.sh` — checks each tagged todo with a GitHub `url:` against current PR/issue state and marks done any that are merged/closed.
   - `sync-todos.sh` — reads newline-separated todo entries on stdin, dedups against the existing list, and adds new ones.
@@ -25,6 +26,7 @@ Point the skill at your environment with these env vars (defaults shown):
 | `RUNDOWN_USER_NAME` | `Me` | Name pattern grepped in meeting notes to find action items addressed to you (matches `[<name>]`, `* <name>:`, or full name). |
 | `RUNDOWN_TZ` | system local | IANA timezone for today's calendar window (e.g. `America/New_York`). |
 | `RUNDOWN_PERSONAL_REPO_PATTERNS` | _empty_ | Comma-separated owner globs to skip in the "your open PRs" bucket (e.g. `youruser/*,scratch-*/*`). |
+| `RUNDOWN_GWS_PROFILE` | `work` | `gws` profile directory name under `$GWS_PROFILE_ROOT` (default `~/.config/gws-profiles`) holding the work Google account. Name it after your org if you like — the value is just a directory name. Exported as `GOOGLE_WORKSPACE_CLI_CONFIG_DIR` for every `gws` call. Set empty to use whatever `gws` defaults to. |
 | `TODO_BIN` | `/opt/homebrew/bin/todo.sh` | Path to the `todo.sh` binary. |
 | `TODO_CFG` | `$HOME/.todo.cfg` | todo.sh config file. |
 | `TODO_FILE` | (from `TODO_CFG`) `$HOME/Documents/todo/todo.txt` | Active todo list file. |
@@ -37,7 +39,39 @@ If you've wired todo.sh up with kanban-style fish/bash helpers (e.g. `now`, `nex
 
 ## Procedure
 
-Fetch GitHub and calendar in parallel.
+Run the step 0 preflight first, then fetch GitHub and calendar in parallel.
+
+### 0. Preflight: select the `gws` profile
+
+**Do this before any `gws` call.** `gws` resolves its account from `GOOGLE_WORKSPACE_CLI_CONFIG_DIR`; when that is unset it silently falls back to a default profile, which may be a personal account with no calendar or Drive scopes. The symptom is a `403 insufficientPermissions` on calendar and Drive while `gws auth status` still reports a valid token — the token is fine, it is just the wrong account.
+
+```bash
+export GWS_PROFILE_ROOT="${GWS_PROFILE_ROOT:-$HOME/.config/gws-profiles}"
+export GOOGLE_WORKSPACE_CLI_CONFIG_DIR="$GWS_PROFILE_ROOT/${RUNDOWN_GWS_PROFILE:-work}"
+
+# gws prints a keyring banner alongside the JSON; slice from the first brace
+# rather than stripping a fixed line count, which breaks depending on whether
+# stderr is merged.
+gws auth status 2>/dev/null | python3 -c '
+import sys, json
+raw = sys.stdin.read()
+d = json.loads(raw[raw.index("{"):])
+need = {"https://www.googleapis.com/auth/calendar", "https://www.googleapis.com/auth/drive"}
+have = set(d.get("scopes", []))
+print("gws account:", d.get("user"))
+missing = need - have
+print("MISSING SCOPES:", ", ".join(sorted(missing)) if missing else "none")
+'
+```
+
+Every subsequent `gws` invocation inherits the exported `GOOGLE_WORKSPACE_CLI_CONFIG_DIR`. If your shell exports it per-session instead (e.g. a `setgwsprofile` helper), the export above is a harmless no-op.
+
+Interpret the preflight before continuing:
+- **Account is the expected work address and no scopes missing** → proceed.
+- **Wrong account** → the profile name is wrong. List candidates with `ls "$GWS_PROFILE_ROOT"` and set `RUNDOWN_GWS_PROFILE` accordingly. Do not re-run `gws auth login`; it will not fix a wrong-profile selection and may overwrite a good token.
+- **Right account but scopes missing** → this one genuinely needs re-consent: `gws auth login` against that profile directory.
+
+If `gws` is unavailable or cannot be pointed at an authenticated work profile, say so and fall back to whatever Google Calendar/Drive connector is attached to the session — the calendar and notes steps produce the same fields either way. Never skip those steps silently.
 
 ### 1. GitHub: live actionable items
 
@@ -114,7 +148,7 @@ Skip PRs whose `repository.nameWithOwner` matches any glob in `RUNDOWN_PERSONAL_
 
 ### 2. Today's calendar
 
-Use your Google Workspace CLI to list today's events for the primary calendar in `RUNDOWN_TZ`. Equivalent of:
+Use your Google Workspace CLI to list today's events for the primary calendar in `RUNDOWN_TZ`, with `GOOGLE_WORKSPACE_CLI_CONFIG_DIR` still set from step 0. Equivalent of:
 
 ```bash
 gws calendar events list --params '{
@@ -146,7 +180,7 @@ gws drive files export \
   --output /tmp/rundown-notes.txt
 ```
 
-(`gws drive files export` writes to `download.txt` in CWD by default — clean it up after, or pass `--output` to redirect.)
+(`gws drive files export` writes to `download.txt` in CWD by default — clean it up after, or pass `--output` to redirect. A `403 insufficientPermissions` here means step 0 was skipped or the profile is wrong, not that the doc is inaccessible.)
 
 **Strategy B (fallback):** if there's no attached doc, list events in the last 14 days, find the most recent event with a non-empty `description`, and use that.
 
@@ -323,5 +357,6 @@ A common helper pattern (in fish, bash, or zsh) is a `snooze N [days|YYYY-MM-DD]
 - `gws drive files export` writes to `download.txt` in the current directory by default. Either pass `--output /tmp/...` or `rm download.txt` after reading.
 - If `gh search` returns 401 / hits rate limits, surface that explicitly rather than presenting an empty list.
 - Don't silently skip the calendar step if the Google Workspace CLI is missing or unauthenticated — tell the user how to fix it.
+- A `gws` 403 on calendar or Drive is a wrong-profile symptom far more often than a missing-scope one. Check `gws auth status` for which account answered before recommending `gws auth login` — telling someone to re-consent when the token was fine sends them to fix the wrong thing.
 - **Todo.sh format conventions for this skill**: every synced entry has the `RUNDOWN_CONTEXT_TAG` (context). PR/issue tasks also carry `+<repo>` (project) and `url:<github web url>` (used for both dedup and reconcile). Meeting/carryover tasks use `[<Meeting Title> <YYYY-MM-DD>]` or `[Carryover]` as a leading bracket tag instead of a URL. Keep this format stable — `reconcile-todos.sh` and `sync-todos.sh` both depend on it.
 - The reconcile script processes resolutions in reverse line-number order so it stays correct whether `TODOTXT_AUTO_ARCHIVE` is on or off.

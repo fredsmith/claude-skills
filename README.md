@@ -16,7 +16,7 @@ Assembles a "what to tackle first" briefing from GitHub (PRs awaiting your revie
 
 **What you get:** A morning-of briefing in priority order, plus a self-maintaining work queue in `todo.txt` that survives across sessions. Configurable context tag, name pattern, and timezone via env vars.
 
-**Data sources:** GitHub (`gh` CLI), Google Workspace calendar + Drive (any CLI with JSON output works; written against [`gws`](https://crates.io/crates/gws)), todo.sh.
+**Data sources:** GitHub (`gh` CLI), Google Workspace calendar + Drive (any CLI with JSON output works; written against [`gws`](https://crates.io/crates/gws), with multi-account profile selection), todo.sh.
 
 **Install:**
 
@@ -37,8 +37,12 @@ export TODOTXT_CFG_FILE="$HOME/Documents/todo/todo.cfg"     # or wherever your t
 # morning-rundown skill knobs
 export RUNDOWN_CONTEXT_TAG="@work"                          # context tag stamped on synced items
 export RUNDOWN_USER_NAME="YourFirstName"                    # name grepped in meeting notes for action items
+export RUNDOWN_GWS_PROFILE="work"                           # gws profile dir holding your *work* Google account
 # export RUNDOWN_TZ="America/New_York"                      # optional, defaults to system local
+# export RUNDOWN_PERSONAL_REPO_PATTERNS="youruser/*"        # optional, owner globs to skip in the your-PRs bucket
 ```
+
+If you use `gws` with more than one Google account, `RUNDOWN_GWS_PROFILE` is the one to get right. `gws` picks its account from `GOOGLE_WORKSPACE_CLI_CONFIG_DIR`, and when that is unset it falls back to a default profile — often a personal account with no calendar or Drive scopes. The rundown's step 0 resolves the profile and reports which account answered, because the resulting `403 insufficientPermissions` otherwise looks like revoked scopes rather than the wrong account.
 
 Then add a snooze filter to your `todo.cfg` so items with a future `t:YYYY-MM-DD` threshold are hidden from default lists. The skill writes these tags when you snooze, and reconcile/sync ignore them — so a snoozed PR that gets merged still gets marked done, and a snoozed action item still dedups by URL.
 

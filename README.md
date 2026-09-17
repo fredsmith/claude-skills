@@ -110,6 +110,7 @@ snoozed() {
 }
 ```
 
+<<<<<<< Updated upstream
 ### [workday-shutdown](workday-shutdown/SKILL.md)
 
 The end-of-day bookend to morning-rundown. Scans every git repo under your configured roots for work stranded locally (uncommitted changes, unpushed commits, branches with no PR), checks GitHub for unsubmitted PR reviews and your stale draft PRs, and splits findings into work vs. personal. Offers to push or open draft PRs per item (with confirmation), then carries anything unfinished into [todo.sh](https://github.com/todotxt/todo.txt-cli) — work under `@work`, personal under `@personal` — so the next morning-rundown resurfaces it.
@@ -125,6 +126,26 @@ The end-of-day bookend to morning-rundown. Scans every git repo under your confi
 ```bash
 mkdir -p ~/.claude/skills && curl -fsSL https://github.com/fredsmith/claude-skills/archive/refs/heads/main.tar.gz | tar -xz -C ~/.claude/skills --strip-components=1 claude-skills-main/workday-shutdown
 ```
+
+### [agent-status](agent-status/SKILL.md)
+
+Reports every background Claude session on this machine in one pass, grouped by state, so you can see what needs you without attaching to anything. Blocked and failed sessions are expanded with their recent output. Built as the entry point for a supervisor session — one that watches the other sessions and routes work to them instead of doing it itself.
+
+**What you get:** A one-screen fleet view — needs-input first, then working, failed, stopped, done — with each session's id, what it is waiting for, whether its process is live or cold, and its directory shown relative to your code root.
+
+**Data sources:** Claude Code Agent View (`claude agents --json --all`, `claude logs`).
+
+**Also ships:** `agent-status/supervisor.md`, an agent definition for a supervisor session that uses this skill as its entry point — it routes work to the session that owns the repo instead of doing the work itself. Edit its Commands table to taste, then drop it in `~/.claude/agents/` and launch with `claude --remote-control supervisor --agent supervisor` from any directory.
+
+**Install:**
+
+```bash
+mkdir -p ~/.claude/skills && curl -fsSL https://github.com/fredsmith/claude-skills/archive/refs/heads/main.tar.gz | tar -xz -C ~/.claude/skills --strip-components=1 claude-skills-main/agent-status
+
+# optional: the paired supervisor agent
+mkdir -p ~/.claude/agents && cp ~/.claude/skills/agent-status/supervisor.md ~/.claude/agents/
+```
+
 
 ### [building-expert-code-reviewer](expert-code-reviewer/SKILL.md)
 
